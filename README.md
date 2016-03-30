@@ -17,7 +17,7 @@ The program has to get the input tweets path, output directory, and the k (ex. h
 4. After the implementation is complete, make a Pull Request to the kmu-leeky/kmu-cs-hot-topics-161 homework-1 branch
 
 ### Due
-The homework due is March 18th. 
+The homework due is April 6th. 
 
 ### Input Tweets Download
 https://s3.ap-northeast-2.amazonaws.com/kmu-cs-leeky-courses/BigData/DataSets/tweets.txt
