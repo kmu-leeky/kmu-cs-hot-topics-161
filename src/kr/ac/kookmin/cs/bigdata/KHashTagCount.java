@@ -2,6 +2,11 @@ package kr.ac.kookmin.cs.bigdata;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.TreeMap;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
@@ -18,10 +23,10 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-public class HashTagCount extends Configured implements Tool {
+public class KHashTagCount extends Configured implements Tool {
     public static void main(String[] args) throws Exception {
         System.out.println(Arrays.toString(args));
-        int res = ToolRunner.run(new Configuration(), new HashTagCount(), args);
+        int res = ToolRunner.run(new Configuration(), new KHashTagCount(), args);
       
         System.exit(res);
     }
@@ -29,14 +34,17 @@ public class HashTagCount extends Configured implements Tool {
     @Override
     public int run(String[] args) throws Exception {
         System.out.println(Arrays.toString(args));
+        
+        Configuration conf = getConf();
+        conf.set("topK",  args[2]);
 
         Job job = Job.getInstance(getConf());
-        job.setJarByClass(HashTagCount.class);
+        job.setJarByClass(KHashTagCount.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(IntWritable.class);
 
-        job.setMapperClass(Map.class);
-        job.setReducerClass(Reduce.class);
+        job.setMapperClass(KMap.class);
+        job.setReducerClass(KReduce.class);
 
         job.setInputFormatClass(TextInputFormat.class);
         job.setOutputFormatClass(TextOutputFormat.class);
@@ -45,11 +53,11 @@ public class HashTagCount extends Configured implements Tool {
         FileOutputFormat.setOutputPath(job, new Path(args[1]));
 
         job.waitForCompletion(true);
-      
+        
         return 0;
     }
    
-    public static class Map extends Mapper<LongWritable, Text, Text, IntWritable> {
+    public static class KMap extends Mapper<LongWritable, Text, Text, IntWritable> {
         private final static IntWritable ONE = new IntWritable(1);
         private Text word = new Text();
 
@@ -59,21 +67,62 @@ public class HashTagCount extends Configured implements Tool {
             for (String token: value.toString().split("\\s+")) {
             	if (token.startsWith("#")) {
             		word.set(token.toLowerCase());
-            		context.write(word, ONE);
+                	context.write(word, ONE);
             	}
             }
         }
     }
 
-    public static class Reduce extends Reducer<Text, IntWritable, Text, IntWritable> {
-        @Override
+    public static class KReduce extends Reducer<Text, IntWritable, Text, IntWritable> {
+    	
+    	private Map<Text, Integer> countMap = new HashMap<>();
+    	
+    	@Override
         public void reduce(Text key, Iterable<IntWritable> values, Context context)
                 throws IOException, InterruptedException {
             int sum = 0;
             for (IntWritable val : values) {
                 sum += val.get();
             }
-            context.write(key, new IntWritable(sum));
+            countMap.put(new Text(key), new Integer(sum));
         }
+    	
+    	protected void cleanup(Context context)
+    			throws IOException, InterruptedException {
+            int K = context.getConfiguration().getInt("topK", 10);
+    		
+    		ValueComparator vc = new ValueComparator(countMap);
+			TreeMap<Text, Integer> tmap = new TreeMap<Text, Integer>(vc);
+			
+			tmap.putAll(countMap);
+			
+			int count = 0;
+			
+			for (Map.Entry<Text, Integer> e : tmap.entrySet()) {
+				if (count++ == K) {
+					break;
+				}
+				Text key = e.getKey();
+				int value = countMap.get(e.getKey());
+				context.write(new Text(key), new IntWritable(value));
+			}
+    	}
     }
+}
+
+class ValueComparator implements Comparator<Text> {
+	
+	private Map<Text, Integer> base;
+	
+	public ValueComparator(Map<Text, Integer> base) {
+		this.base = base;
+	}
+	
+	public int compare(Text a, Text b) {
+		if (base.get(a) >= base.get(b)) {
+			return -1;
+		} else {
+			return 1;
+		}
+	}
 }
