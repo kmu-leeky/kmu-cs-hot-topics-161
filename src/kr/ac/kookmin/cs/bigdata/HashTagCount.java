@@ -22,7 +22,7 @@ public class HashTagCount extends Configured implements Tool {
     public static void main(String[] args) throws Exception {
         System.out.println(Arrays.toString(args));
         int res = ToolRunner.run(new Configuration(), new HashTagCount(), args);
-      
+      // test
         System.exit(res);
     }
 
