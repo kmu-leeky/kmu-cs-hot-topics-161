@@ -19,61 +19,65 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 public class HashTagCount extends Configured implements Tool {
-    public static void main(String[] args) throws Exception {
-        System.out.println(Arrays.toString(args));
-        int res = ToolRunner.run(new Configuration(), new HashTagCount(), args);
-      
-        System.exit(res);
-    }
+	public static void main(String[] args) throws Exception {
+		System.out.println(Arrays.toString(args));
+		int res = ToolRunner.run(new Configuration(), new HashTagCount(), args);
 
-    @Override
-    public int run(String[] args) throws Exception {
-        System.out.println(Arrays.toString(args));
+		System.exit(res);
+	}
 
-        Job job = Job.getInstance(getConf());
-        job.setJarByClass(HashTagCount.class);
-        job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(IntWritable.class);
+	@Override
+	public int run(String[] args) throws Exception {
+		System.out.println(Arrays.toString(args));
 
-        job.setMapperClass(Map.class);
-        job.setReducerClass(Reduce.class);
+		Job job = Job.getInstance(getConf());
+		job.setJarByClass(HashTagCount.class);
+		job.setOutputKeyClass(Text.class);
+		job.setOutputValueClass(IntWritable.class);
 
-        job.setInputFormatClass(TextInputFormat.class);
-        job.setOutputFormatClass(TextOutputFormat.class);
+		job.setMapperClass(Map.class);
+		job.setReducerClass(Reduce.class);
 
-        FileInputFormat.addInputPath(job, new Path(args[0]));
-        FileOutputFormat.setOutputPath(job, new Path(args[1]));
+		job.setInputFormatClass(TextInputFormat.class);
+		job.setOutputFormatClass(TextOutputFormat.class);
 
-        job.waitForCompletion(true);
-      
-        return 0;
-    }
-   
-    public static class Map extends Mapper<LongWritable, Text, Text, IntWritable> {
-        private final static IntWritable ONE = new IntWritable(1);
-        private Text word = new Text();
+		FileInputFormat.addInputPath(job, new Path(args[0]));
+		FileOutputFormat.setOutputPath(job, new Path(args[1]));
 
-        @Override
-        public void map(LongWritable key, Text value, Context context)
-                throws IOException, InterruptedException {
-            for (String token: value.toString().split("\\s+")) {
-            	if (token.startsWith("#")) {
-            		word.set(token.toLowerCase());
-            		context.write(word, ONE);
-            	}
-            }
-        }
-    }
+		job.waitForCompletion(true);
 
-    public static class Reduce extends Reducer<Text, IntWritable, Text, IntWritable> {
-        @Override
-        public void reduce(Text key, Iterable<IntWritable> values, Context context)
-                throws IOException, InterruptedException {
-            int sum = 0;
-            for (IntWritable val : values) {
-                sum += val.get();
-            }
-            context.write(key, new IntWritable(sum));
-        }
-    }
+		return 0;
+	}
+
+	public static class Map extends
+			Mapper<LongWritable, Text, Text, IntWritable> {
+		private final static IntWritable ONE = new IntWritable(1);
+		private Text word = new Text();
+
+		@Override
+		public void map(LongWritable key, Text value, Context context)
+				throws IOException, InterruptedException {
+			for (String token : value.toString().split("\\s+")) {
+				// For English only and not perfect.
+				// (as it does not check !@#$%^&*()-+=>>?:;"'[]{}\|`~)
+				if (token.matches("#\\w*[A-Za-z]+\\w*")) {
+					word.set(token.toLowerCase());
+					context.write(word, ONE);
+				}
+			}
+		}
+	}
+
+	public static class Reduce extends
+			Reducer<Text, IntWritable, Text, IntWritable> {
+		@Override
+		public void reduce(Text key, Iterable<IntWritable> values,
+				Context context) throws IOException, InterruptedException {
+			int sum = 0;
+			for (IntWritable val : values) {
+				sum += val.get();
+			}
+			context.write(key, new IntWritable(sum));
+		}
+	}
 }
