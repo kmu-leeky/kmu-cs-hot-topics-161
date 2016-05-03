@@ -21,5 +21,5 @@ Due
 The homework due is May 4th.
 
 Download build file and source file
-• curl -Ok https://s3.ap-northeast-2.amazonaws.com/kmu-cs-leeky-courses/BigData/Spark/build.sbt
-• curl -Ok https://s3.ap-northeast-2.amazonaws.com/kmu-cs-leeky-courses/BigData/Spark/scala-wordcount.scala
+    curl -Ok https://s3.ap-northeast-2.amazonaws.com/kmu-cs-leeky-courses/BigData/Spark/build.sbt
+    curl -Ok https://s3.ap-northeast-2.amazonaws.com/kmu-cs-leeky-courses/BigData/Spark/scala-wordcount.scala
